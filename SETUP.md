@@ -1,9 +1,16 @@
 # Study Vault — Setup Guide
 
+## 🚀 Your App is LIVE at:
+## 👉 https://mshakib0205-cell.github.io/personal-vault/
+
+**GitHub Repo:** https://github.com/mshakib0205-cell/personal-vault
+
+---
+
 ## What You Need
 
 - ✅ A [MEGA](https://mega.nz) account (free, 20 GB) — sign up at **mega.nz**
-- ✅ A [GitHub](https://github.com) account (free) — for hosting
+- ✅ GitHub repo already set up ✓
 
 ---
 
