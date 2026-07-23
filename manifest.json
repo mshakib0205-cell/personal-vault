@@ -2,12 +2,13 @@
   "name": "Study Vault",
   "short_name": "StudyVault",
   "description": "Personal study file vault — organize and access your study materials from anywhere.",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#6366f1",
-  "background_color": "#0d1117",
-  "scope": "/",
+  "theme_color": "#0b0c10",
+  "background_color": "#0b0c10",
+  "scope": "./",
+  "id": "./",
   "lang": "en",
   "categories": ["education", "productivity"],
   "icons": [
@@ -24,19 +25,12 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
   "shortcuts": [
     {
-      "name": "Upload File",
-      "short_name": "Upload",
-      "url": "/app.html#upload",
-      "description": "Upload a new study file"
-    },
-    {
-      "name": "Search Files",
-      "short_name": "Search",
-      "url": "/app.html#search",
-      "description": "Search your study files"
+      "name": "Open Vault",
+      "short_name": "Vault",
+      "url": "./index.html",
+      "description": "Open your study file vault"
     }
   ]
 }

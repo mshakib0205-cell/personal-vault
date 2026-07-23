@@ -642,10 +642,12 @@ function fileEmoji(ext) {
   return ({pdf:'📄',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',webp:'🖼️',doc:'📝',docx:'📝',ppt:'📊',pptx:'📊',xls:'📈',xlsx:'📈',py:'🐍',js:'💛',html:'🌐',css:'🎨',zip:'🗜️'})[ext] || '📄';
 }
 
-// UNREGISTER OLD SERVICE WORKERS FOR HARD CACHE WIPE
+// REGISTER SERVICE WORKER FOR MOBILE PWA SUPPORT
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    for (let r of regs) r.unregister();
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => console.log('[SW] Registered with scope:', reg.scope))
+      .catch(err => console.warn('[SW] Registration error:', err));
   });
 }
 
