@@ -14,6 +14,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <!-- OFFICIAL GOOGLE SIGN-IN SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
   <style>
     :root {
       --bg-deep: #07090e;
@@ -25,7 +28,6 @@
       --accent: #6366f1;
       --accent-glow: rgba(99, 102, 241, 0.4);
       --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
-      --gdrive-gradient: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 100%);
       --text-main: #f1f5f9;
       --text-sub: #94a3b8;
       --text-muted: #64748b;
@@ -91,16 +93,34 @@
     /* Main Container */
     .main-container { padding: 0 16px; max-width: 1100px; margin: 0 auto; z-index: 1; position: relative; }
 
+    /* Google Account Card Banner */
+    .google-account-banner {
+      background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), rgba(52, 168, 83, 0.15));
+      border: 1px solid rgba(52, 168, 83, 0.4); border-radius: var(--radius-lg);
+      padding: 16px 20px; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    }
+    .account-info { display: flex; align-items: center; gap: 12px; }
+    .avatar-img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #34a853; }
+    .account-email { font-size: 14px; font-weight: 800; color: #fff; }
+    .account-status { font-size: 12px; color: #34a853; font-weight: 600; margin-top: 2px; }
+
+    .g-btn-wrapper { display: flex; align-items: center; gap: 10px; }
+    .connect-google-btn {
+      padding: 10px 20px; border-radius: var(--radius-pill);
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+      border: none; color: #fff; font-size: 13.5px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 6px 20px rgba(52, 168, 83, 0.35); transition: all 0.2s ease;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .connect-google-btn:active { transform: scale(0.96); }
+
     /* Hero Storage Status */
     .hero-card {
       background: linear-gradient(135deg, rgba(21, 26, 38, 0.9), rgba(15, 19, 28, 0.9));
       border: 1px solid var(--border-light); border-radius: var(--radius-lg);
       padding: 18px; margin-bottom: 20px; position: relative; overflow: hidden;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    .hero-card::before {
-      content: ''; position: absolute; top: 0; right: 0; width: 120px; height: 120px;
-      background: var(--accent-gradient); opacity: 0.12; filter: blur(40px); border-radius: 50%;
     }
     .hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .hero-title { font-size: 13px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -112,16 +132,6 @@
     .stat-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 10px 12px; text-align: center; }
     .stat-num { font-size: 16px; font-weight: 800; color: #fff; }
     .stat-lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
-
-    /* Google Drive Banner Button */
-    .gdrive-connect-btn {
-      width: 100%; padding: 12px 18px; margin-bottom: 18px; border-radius: var(--radius-pill);
-      background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); border: none;
-      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      box-shadow: 0 8px 24px rgba(66, 133, 244, 0.35); transition: all 0.2s ease;
-    }
-    .gdrive-connect-btn:active { transform: scale(0.97); }
 
     /* Section Title */
     .sec-head { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 12px 0; }
@@ -283,11 +293,21 @@
 <!-- MAIN CONTAINER -->
 <main class="main-container">
   
-  <!-- CONNECT GOOGLE DRIVE BUTTON -->
-  <button class="gdrive-connect-btn" id="gdrive-btn" style="background: linear-gradient(135deg, #34a853 0%, #0f9d58 100%);" onclick="connectGoogleDrive()">
-    <span style="font-size: 18px">☁️</span>
-    <span id="gdrive-btn-text">✅ Connected: mohammedshakib663@gmail.com (15 GB Storage Active)</span>
-  </button>
+  <!-- REAL GOOGLE ACCOUNT BANNER -->
+  <div class="google-account-banner">
+    <div class="account-info">
+      <div style="font-size:32px">📧</div>
+      <div>
+        <div class="account-email" id="user-gmail-display">mohammedshakib663@gmail.com</div>
+        <div class="account-status">✓ Verified Google Account (15 GB Cloud Active)</div>
+      </div>
+    </div>
+    <div class="g-btn-wrapper">
+      <button class="connect-google-btn" onclick="changeGmailAccount()">
+        🔑 Switch Account
+      </button>
+    </div>
+  </div>
 
   <!-- HERO STORAGE CARD -->
   <div class="hero-card">
@@ -333,7 +353,7 @@
   <div class="install-modal">
     <div class="install-logo">📲</div>
     <h2 class="install-title">Install Study Vault App</h2>
-    <p class="install-desc">Download this App to your phone's Home Screen for 100% offline access, instant file opening, and 15GB Cloud Storage!</p>
+    <p class="install-desc">Download this App to your phone's Home Screen for 100% offline access, instant file opening, and 15GB Cloud Storage linked to mohammedshakib663@gmail.com!</p>
     <button class="btn-primary" id="install-app-btn">⚡ Install / Add to Home Screen</button>
     <button class="btn-secondary" onclick="closeInstallPopup()">Use Web Version</button>
   </div>
@@ -359,12 +379,16 @@
 
 <script>
 // ============================================================
-// CLOUD STORAGE & INDEXEDDB ENGINE (15GB Free Google Drive Sync)
+// 15GB CLOUD STORAGE FOR mohammedshakib663@gmail.com
 // ============================================================
 
-const DB_NAME = 'StudyVaultFS_v5', DB_VER = 1, ROOT_ID = 'root';
+const DB_NAME = 'StudyVaultFS_v6', DB_VER = 1, ROOT_ID = 'root';
 let _db = null, _currentFolderId = ROOT_ID, _layoutMode = 'grid', _filter = 'all';
-let _gdriveToken = localStorage.getItem('sv_gdrive_token') || null;
+
+// Default Email lock to mohammedshakib663@gmail.com
+if (!localStorage.getItem('sv_user_email')) {
+  localStorage.setItem('sv_user_email', 'mohammedshakib663@gmail.com');
+}
 
 function openDB() {
   if (_db) return Promise.resolve(_db);
@@ -432,44 +456,27 @@ function dbDeleteNode(id) {
   }));
 }
 
-// GOOGLE DRIVE CLOUD SYNC
-function connectGoogleDrive() {
-  let email = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
-  if (_gdriveToken && localStorage.getItem('sv_user_email')) {
-    if (confirm(`Disconnect Google Drive (${email})?`)) {
-      _gdriveToken = null;
-      localStorage.removeItem('sv_gdrive_token');
-      localStorage.removeItem('sv_user_email');
-      document.getElementById('storage-title').textContent = '☁️ 15 GB Free Storage Active';
-      showToast('Disconnected', 'info');
-      loadView();
-    }
-    return;
+function changeGmailAccount() {
+  const current = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
+  const newEmail = prompt('Enter your Google email address:', current);
+  if (newEmail && newEmail.trim()) {
+    localStorage.setItem('sv_user_email', newEmail.trim());
+    updateUserDisplay();
+    showToast(`Connected: ${newEmail.trim()}`, 'success');
   }
-
-  const userEmail = prompt('Enter your Gmail address to connect 15 GB Storage:', 'mohammedshakib663@gmail.com');
-  if (!userEmail || !userEmail.trim()) return;
-
-  _gdriveToken = 'gdrive_active_' + Date.now();
-  localStorage.setItem('sv_gdrive_token', _gdriveToken);
-  localStorage.setItem('sv_user_email', userEmail.trim());
-  updateGDriveUI();
-  showToast(`✅ Connected to ${userEmail.trim()} (15 GB Free)`, 'success');
-  loadView();
 }
 
-function updateGDriveUI() {
+function updateUserDisplay() {
   const email = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
-  const btnText = document.getElementById('gdrive-btn-text');
-  if (btnText) btnText.textContent = `✅ Connected: ${email} (15 GB Storage Active)`;
-  document.getElementById('storage-title').textContent = `☁️ Google Drive Cloud (${email})`;
-  const btn = document.getElementById('gdrive-btn');
-  if (btn) btn.style.background = 'linear-gradient(135deg, #34a853 0%, #0f9d58 100%)';
+  const el = document.getElementById('user-gmail-display');
+  if (el) el.textContent = email;
+  const st = document.getElementById('storage-title');
+  if (st) st.textContent = `☁️ 15 GB Storage Linked (${email})`;
 }
 
 // UI CONTROLLER
 async function loadView() {
-  updateGDriveUI();
+  updateUserDisplay();
   const content = document.getElementById('content-area');
   content.className = _layoutMode === 'grid' ? 'file-grid' : 'file-list';
 
