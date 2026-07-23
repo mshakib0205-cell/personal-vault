@@ -284,9 +284,9 @@
 <main class="main-container">
   
   <!-- CONNECT GOOGLE DRIVE BUTTON -->
-  <button class="gdrive-connect-btn" id="gdrive-btn" onclick="connectGoogleDrive()">
+  <button class="gdrive-connect-btn" id="gdrive-btn" style="background: linear-gradient(135deg, #34a853 0%, #0f9d58 100%);" onclick="connectGoogleDrive()">
     <span style="font-size: 18px">☁️</span>
-    <span id="gdrive-btn-text">Connected: shakib338383@gmail.com (15 GB Free Storage)</span>
+    <span id="gdrive-btn-text">✅ Connected: mohammedshakib663@gmail.com (15 GB Storage Active)</span>
   </button>
 
   <!-- HERO STORAGE CARD -->
@@ -434,8 +434,8 @@ function dbDeleteNode(id) {
 
 // GOOGLE DRIVE CLOUD SYNC
 function connectGoogleDrive() {
-  let email = localStorage.getItem('sv_user_email');
-  if (_gdriveToken && email) {
+  let email = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
+  if (_gdriveToken && localStorage.getItem('sv_user_email')) {
     if (confirm(`Disconnect Google Drive (${email})?`)) {
       _gdriveToken = null;
       localStorage.removeItem('sv_gdrive_token');
@@ -447,7 +447,7 @@ function connectGoogleDrive() {
     return;
   }
 
-  const userEmail = prompt('Enter your Gmail address to connect 15 GB Storage:', email || 'shakib338383@gmail.com');
+  const userEmail = prompt('Enter your Gmail address to connect 15 GB Storage:', 'mohammedshakib663@gmail.com');
   if (!userEmail || !userEmail.trim()) return;
 
   _gdriveToken = 'gdrive_active_' + Date.now();
@@ -459,14 +459,12 @@ function connectGoogleDrive() {
 }
 
 function updateGDriveUI() {
-  const email = localStorage.getItem('sv_user_email') || 'Your Google Account';
-  if (_gdriveToken) {
-    const btnText = document.getElementById('gdrive-btn-text');
-    if (btnText) btnText.textContent = `✅ Connected: ${email} (15 GB Storage Active)`;
-    document.getElementById('storage-title').textContent = `☁️ Google Drive (${email})`;
-    const btn = document.getElementById('gdrive-btn');
-    if (btn) btn.style.background = 'linear-gradient(135deg, #34a853 0%, #0f9d58 100%)';
-  }
+  const email = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
+  const btnText = document.getElementById('gdrive-btn-text');
+  if (btnText) btnText.textContent = `✅ Connected: ${email} (15 GB Storage Active)`;
+  document.getElementById('storage-title').textContent = `☁️ Google Drive Cloud (${email})`;
+  const btn = document.getElementById('gdrive-btn');
+  if (btn) btn.style.background = 'linear-gradient(135deg, #34a853 0%, #0f9d58 100%)';
 }
 
 // UI CONTROLLER
