@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="description" content="Study Vault — Your personal study file manager. Securely store and organize study materials." />
+  <title>Study Vault — Login</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StudyVault" />
+</head>
+<body>
+
+<div class="auth-page" id="auth-page">
+
+  <!-- Theme Toggle -->
+  <button class="btn-icon theme-toggle-auth" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+
+  <!-- Auth Card -->
+  <div class="auth-card">
+
+    <!-- Branding -->
+    <div class="auth-brand">
+      <div class="auth-logo">📚</div>
+      <div class="auth-title">Study Vault</div>
+      <div class="auth-subtitle">Your personal study file manager</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tab-login" data-tab="login" role="tab" aria-selected="true">Sign In</button>
+      <button class="auth-tab" id="tab-signup" data-tab="signup" role="tab" aria-selected="false">Create Account</button>
+    </div>
+
+    <!-- Error Message -->
+    <div class="auth-error hidden" id="auth-error" role="alert">
+      <span>⚠️</span>
+      <span id="auth-error-msg">Error message</span>
+    </div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="login-form" autocomplete="on" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="login-email">MEGA Email</label>
+        <div class="input-wrapper">
+          <span class="input-icon">✉️</span>
+          <input class="input" id="login-email" type="email" placeholder="your@email.com"
+                 autocomplete="email" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="login-password">Password</label>
+        <div class="input-wrapper">
+          <span class="input-icon">🔒</span>
+          <input class="input" id="login-password" type="password" placeholder="Your MEGA password"
+                 autocomplete="current-password" required />
+          <span class="input-suffix" id="toggle-pw-login" title="Show/hide password">👁️</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:-4px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary)">
+          <input type="checkbox" id="remember-me" style="accent-color:var(--accent);" />
+          Remember me on this device
+        </label>
+      </div>
+      <button type="submit" class="auth-submit" id="login-btn">
+        <span id="login-btn-text">Sign In to Study Vault</span>
+      </button>
+    </form>
+
+    <!-- Signup Form (hidden by default) -->
+    <form class="auth-form hidden" id="signup-form" autocomplete="off" novalidate>
+      <div class="auth-info">
+        <strong>Don't have a MEGA account?</strong><br/>
+        Study Vault uses <a href="https://mega.nz/register" target="_blank" rel="noopener">MEGA.nz</a>
+        for free, encrypted cloud storage (20 GB free).<br/>
+        Create your free account there, then come back to sign in.
+      </div>
+      <a href="https://mega.nz/register" target="_blank" rel="noopener" class="btn btn-primary btn-lg w-full"
+         style="justify-content:center;text-decoration:none;">
+        🚀 Create Free MEGA Account
+      </a>
+      <div class="auth-divider">or</div>
+      <button type="button" class="btn btn-secondary btn-lg w-full" id="go-to-login">
+        Sign in with existing account
+      </button>
+    </form>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="auth-footer">
+    Your files are end-to-end encrypted by MEGA 🔐
+  </div>
+
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<script type="module">
+  import { login, restoreSession, isLoggedIn } from './js/mega.js';
+  import { registerServiceWorker } from './js/sw-register.js';
+
+  registerServiceWorker();
+
+  // ---- Restore session on load ----
+  (async () => {
+    if (isLoggedIn()) {
+      showLoading('Restoring session…');
+      try {
+        const storage = await restoreSession();
+        if (storage) {
+          window.location.href = 'app.html';
+          return;
+        }
+      } catch (_) {}
+      hideLoading();
+    }
+  })();
+
+  // ---- Theme toggle ----
+  const themeBtn = document.getElementById('theme-toggle');
+  let theme = localStorage.getItem('sv_theme') || 'dark';
+  applyTheme(theme);
+
+  themeBtn?.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    applyTheme(theme);
+  });
+
+  function applyTheme(t) {
+    theme = t;
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('sv_theme', t);
+    if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll('.auth-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      document.querySelectorAll('.auth-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === target));
+      document.getElementById('login-form').classList.toggle('hidden', target !== 'login');
+      document.getElementById('signup-form').classList.toggle('hidden', target !== 'signup');
+      hideError();
+    });
+  });
+
+  document.getElementById('go-to-login')?.addEventListener('click', () => {
+    document.querySelector('[data-tab="login"]')?.click();
+  });
+
+  // ---- Toggle password visibility ----
+  document.getElementById('toggle-pw-login')?.addEventListener('click', () => {
+    const pw = document.getElementById('login-password');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+  });
+
+  // ---- Login Form ----
+  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideError();
+
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const remember = document.getElementById('remember-me')?.checked || false;
+
+    if (!email || !password) { showError('Please enter your email and password'); return; }
+
+    showLoading('Signing in…');
+
+    try {
+      await login(email, password, remember);
+      window.location.href = 'app.html';
+    } catch (err) {
+      hideLoading();
+      showError(err.message);
+    }
+  });
+
+  // ---- Helpers ----
+  function showLoading(msg = 'Loading…') {
+    const btn = document.getElementById('login-btn');
+    const text = document.getElementById('login-btn-text');
+    if (btn) btn.disabled = true;
+    if (text) text.innerHTML = `<div class="spinner"></div> ${msg}`;
+  }
+
+  function hideLoading() {
+    const btn = document.getElementById('login-btn');
+    const text = document.getElementById('login-btn-text');
+    if (btn) btn.disabled = false;
+    if (text) text.textContent = 'Sign In to Study Vault';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('auth-error');
+    const msgEl = document.getElementById('auth-error-msg');
+    if (el && msgEl) { msgEl.textContent = msg; el.classList.remove('hidden'); }
+  }
+
+  function hideError() {
+    document.getElementById('auth-error')?.classList.add('hidden');
+  }
+</script>
+
+</body>
+</html>

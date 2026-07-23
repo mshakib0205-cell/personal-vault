@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="description" content="Study Vault — Manage your study files securely." />
+  <title>Study Vault</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StudyVault" />
+</head>
+<body>
+
+<div class="app-wrapper" id="app-wrapper">
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-logo" id="logo-home">
+      <div class="header-logo-icon">📚</div>
+      <span class="header-logo-text">Study Vault</span>
+    </div>
+
+    <div class="header-search">
+      <span class="header-search-icon">🔍</span>
+      <input class="header-search-input" id="header-search" type="search"
+             placeholder="Search files and folders…" autocomplete="off"
+             aria-label="Search files and folders" />
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-icon" id="install-btn" class="hidden" title="Install app" aria-label="Install app">📲</button>
+      <button class="btn-icon" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="app-main" id="app-main">
+
+    <!-- HOME VIEW -->
+    <div class="view active" id="view-home" role="tabpanel" aria-labelledby="nav-home">
+      <!-- Rendered by ui.js -->
+      <div class="empty-state">
+        <div class="spinner" style="width:32px;height:32px;border:3px solid var(--border-default);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite"></div>
+      </div>
+    </div>
+
+    <!-- FOLDERS VIEW -->
+    <div class="view" id="view-folders" role="tabpanel" aria-labelledby="nav-folders">
+      <!-- Rendered by ui.js -->
+    </div>
+
+    <!-- SEARCH VIEW -->
+    <div class="view" id="view-search" role="tabpanel" aria-labelledby="nav-search">
+      <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <h3>Search your files</h3>
+        <p>Type in the search bar above to find files and folders</p>
+      </div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div class="view" id="view-settings" role="tabpanel" aria-labelledby="nav-settings">
+      <!-- Rendered by ui.js -->
+    </div>
+
+  </main>
+
+  <!-- ===== BOTTOM NAVIGATION ===== -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <button class="nav-item active" data-view="home" id="nav-home" aria-label="Home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-view="folders" id="nav-folders" aria-label="Folders">
+      <span class="nav-icon">📁</span>
+      <span class="nav-label">Folders</span>
+    </button>
+    <button class="nav-item" data-view="search" id="nav-search" aria-label="Search">
+      <span class="nav-icon">🔍</span>
+      <span class="nav-label">Search</span>
+    </button>
+    <button class="nav-item nav-upload" data-view="upload" id="nav-upload" aria-label="Upload files">
+      <span class="nav-icon-wrapper">⬆️</span>
+      <span class="nav-label">Upload</span>
+    </button>
+    <button class="nav-item" data-view="settings" id="nav-settings" aria-label="Settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ===== FAB: New Folder ===== -->
+<button class="fab hidden" id="fab-new-folder" title="New folder" aria-label="Create new folder">＋</button>
+
+<!-- ===== UPLOAD SHEET ===== -->
+<div class="bottom-sheet-overlay hidden" id="upload-sheet-overlay"></div>
+<div class="bottom-sheet hidden" id="upload-sheet" role="dialog" aria-modal="true" aria-label="Upload files">
+  <div class="sheet-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="sheet-title">Upload Files</div>
+    <button class="btn-icon" id="upload-sheet-close" aria-label="Close upload">✕</button>
+  </div>
+  <div class="upload-sheet-content">
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Click or drag files to upload">
+      <div class="dropzone-icon">📂</div>
+      <div class="dropzone-title">Drop files here</div>
+      <div class="dropzone-sub">or tap to browse</div>
+      <div class="dropzone-types">PDF, Images, Word, Excel, PowerPoint, ZIP, Code files (Java, Python, JS, etc.)</div>
+    </div>
+    <input type="file" id="file-input" multiple hidden
+           accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.svg,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.html,.css,.js,.ts,.py,.java,.c,.cpp,.rb,.go,.rs,.json,.xml,.yaml,.sql,.zip,.rar,.7z,.tar,.gz,.odt,.ods,.odp,.ipynb" />
+    <div id="upload-queue"></div>
+    <button class="btn btn-primary w-full btn-lg" id="upload-start-btn" disabled>
+      ⬆️ Start Upload
+    </button>
+  </div>
+</div>
+
+<!-- ===== MODAL OVERLAY ===== -->
+<div class="overlay hidden" id="modal-overlay" role="presentation">
+
+  <!-- New Folder Modal -->
+  <div class="modal hidden" id="new-folder-modal" role="dialog" aria-modal="true" aria-labelledby="new-folder-title">
+    <div class="modal-header">
+      <div class="modal-title" id="new-folder-title">📁 New Folder</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="new-folder-input">Folder Name</label>
+        <input class="input" id="new-folder-input" type="text" placeholder="e.g. Physics Notes" maxlength="255" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="new-folder-cancel">Cancel</button>
+      <button class="btn btn-primary" id="new-folder-create">Create Folder</button>
+    </div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div class="modal hidden" id="rename-modal" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+    <div class="modal-header">
+      <div class="modal-title" id="rename-title">✏️ Rename</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="rename-input">New Name</label>
+        <input class="input" id="rename-input" type="text" maxlength="255" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="rename-cancel">Cancel</button>
+      <button class="btn btn-primary" id="rename-save">Save</button>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal hidden" id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal-header">
+      <div class="modal-title" id="delete-title">🗑️ Delete</div>
+    </div>
+    <div class="modal-body">
+      <p id="delete-msg" style="color:var(--text-secondary)">Delete this item? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
+      <button class="btn btn-danger" id="delete-confirm">Delete</button>
+    </div>
+  </div>
+
+  <!-- Move Modal -->
+  <div class="modal hidden" id="move-modal" role="dialog" aria-modal="true" aria-labelledby="move-title" style="max-height:80dvh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--bg-card);z-index:1;padding-bottom:12px">
+      <div class="modal-title" id="move-title">📁 Move to…</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:12px">Select a destination folder:</p>
+      <div class="folder-tree" id="move-folder-tree"></div>
+    </div>
+    <div class="modal-footer" style="position:sticky;bottom:0;background:var(--bg-card);padding-top:12px">
+      <button class="btn btn-secondary" id="move-cancel">Cancel</button>
+      <button class="btn btn-primary" id="move-confirm">Move Here</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== PREVIEW OVERLAY ===== -->
+<div class="preview-overlay hidden" id="preview-overlay" role="dialog" aria-modal="true" aria-label="File preview">
+  <div class="preview-header">
+    <button class="btn-icon" id="preview-close-btn" aria-label="Close preview" style="color:var(--text-secondary)">✕</button>
+    <div class="preview-filename" id="preview-filename">filename.pdf</div>
+    <div class="preview-actions">
+      <button class="btn-icon" id="preview-download-btn" title="Download" aria-label="Download file" style="color:var(--text-secondary)">⬇️</button>
+    </div>
+  </div>
+  <div class="preview-body" id="preview-body"></div>
+  <div style="padding:8px 16px;background:rgba(22,27,34,0.9);border-top:1px solid var(--border-subtle);display:flex;gap:16px;font-size:12px;color:var(--text-tertiary);flex-shrink:0">
+    <span id="preview-size"></span>
+    <span id="preview-date"></span>
+  </div>
+</div>
+
+<!-- ===== CONTEXT MENU ===== -->
+<div class="context-menu hidden" id="context-menu" role="menu"></div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ===== LOADING SCREEN ===== -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;transition:opacity 0.3s">
+  <div style="width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#a371f7);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 24px rgba(99,102,241,0.4)">📚</div>
+  <div style="font-size:18px;font-weight:700;background:linear-gradient(135deg,#e6edf3,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Study Vault</div>
+  <div style="width:32px;height:32px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;border-radius:50%;animation:spin 0.7s linear infinite"></div>
+  <div style="font-size:13px;color:var(--text-tertiary)" id="loading-msg">Loading your vault…</div>
+</div>
+
+<script type="module">
+  import { restoreSession, isLoggedIn } from './js/mega.js';
+  import { initApp, applyTheme, showToast } from './js/ui.js';
+  import { loadIndexFromCache } from './js/search.js';
+  import { registerServiceWorker } from './js/sw-register.js';
+
+  registerServiceWorker();
+
+  const loadingScreen = document.getElementById('loading-screen');
+  const loadingMsg = document.getElementById('loading-msg');
+
+  function setMsg(msg) { if (loadingMsg) loadingMsg.textContent = msg; }
+  function hideLoader() {
+    if (loadingScreen) {
+      loadingScreen.style.opacity = '0';
+      setTimeout(() => loadingScreen.remove(), 300);
+    }
+  }
+
+  // ---- Apply saved theme immediately ----
+  const savedTheme = localStorage.getItem('sv_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  const themeBtn = document.getElementById('theme-toggle-btn');
+  if (themeBtn) themeBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+  // ---- Check auth ----
+  if (!isLoggedIn()) {
+    window.location.href = 'index.html';
+  } else {
+    (async () => {
+      try {
+        setMsg('Connecting to MEGA…');
+        const storage = await restoreSession();
+
+        if (!storage) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        setMsg('Loading your files…');
+        await loadIndexFromCache();
+
+        setMsg('Building vault…');
+        await initApp();
+
+        hideLoader();
+      } catch (err) {
+        hideLoader();
+        showToast(`Error: ${err.message}`, 'error', 8000);
+        setTimeout(() => window.location.href = 'index.html', 3000);
+      }
+    })();
+  }
+
+  // ---- Logo click → home ----
+  document.getElementById('logo-home')?.addEventListener('click', () => {
+    import('./js/ui.js').then(({ showView }) => showView('home'));
+  });
+</script>
+
+</body>
+</html>
