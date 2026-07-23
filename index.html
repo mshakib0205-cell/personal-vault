@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Study Vault</title>
   <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/main.css"/>
@@ -11,19 +11,27 @@
   <meta name="theme-color" content="#0d1117"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-title" content="StudyVault"/>
+  <style>
+    * { touch-action: manipulation; }
+    #loading-screen{position:fixed;inset:0;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999;transition:opacity 0.15s ease-out}
+    .loading-logo{width:64px;height:64px;background:linear-gradient(135deg,#6366f1,#a371f7);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 8px 32px rgba(99,102,241,.4)}
+    .loading-title{font-size:20px;font-weight:700;background:linear-gradient(135deg,#e6edf3,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .loading-spinner{width:28px;height:28px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1}
+    .loading-msg{font-size:13px;color:var(--text-tertiary)}
+  </style>
 </head>
 <body>
 
-<!-- LOADING -->
+<!-- FAST INITIAL LOADING SCREEN -->
 <div id="loading-screen">
   <div class="loading-logo">📚</div>
   <div class="loading-title">Study Vault</div>
   <div class="spinner loading-spinner"></div>
-  <div class="loading-msg" id="loading-msg">Starting…</div>
+  <div class="loading-msg" id="loading-msg">Opening vault…</div>
 </div>
 
-<!-- APP SHELL -->
-<div class="app-wrapper" id="app-wrapper" style="opacity:0;transition:opacity 0.3s">
+<!-- MAIN APP SHELL -->
+<div class="app-wrapper" id="app-wrapper" style="opacity:0;transition:opacity 0.15s ease-in">
   <header class="app-header">
     <div class="header-logo" id="logo-home">
       <div class="header-logo-icon">📚</div>
@@ -155,20 +163,11 @@
 <div class="context-menu hidden" id="context-menu"></div>
 <div id="toast-container" aria-live="polite"></div>
 
-<style>
-#loading-screen{position:fixed;inset:0;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999}
-.loading-logo{width:64px;height:64px;background:linear-gradient(135deg,#6366f1,#a371f7);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 8px 32px rgba(99,102,241,.4)}
-.loading-title{font-size:20px;font-weight:700;background:linear-gradient(135deg,#e6edf3,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.loading-spinner{width:28px;height:28px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1}
-.loading-msg{font-size:13px;color:var(--text-tertiary)}
-</style>
-
 <script>
 // ============================================================
-// STUDY VAULT — All-in-one script (no ES modules)
+// HIGH PERFORMANCE ENGINE (Zero latency, Fast IndexedDB)
 // ============================================================
 
-// ---- IndexedDB ----
 const DB_NAME = 'StudyVaultFS', DB_VER = 1, ROOT_ID = 'root';
 let _db = null;
 
@@ -210,9 +209,7 @@ async function ensureRoot() {
   return n;
 }
 
-function dbGet(id)          { return dbTx('nodes','readonly', s => s.get(id)); }
-function dbGetChildren(pid) { return dbTx('nodes','readonly', s => s.objectStore ? s.index('parentId').getAll(pid) : s.index('parentId').getAll(pid))
-  .catch(()=> openDB().then(db => new Promise((res,rej)=>{ const t=db.transaction('nodes','readonly'); const r=t.objectStore('nodes').index('parentId').getAll(pid); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error); }))); }
+function dbGet(id) { return dbTx('nodes','readonly', s => s.get(id)); }
 
 function dbGetChildrenSafe(pid) {
   return openDB().then(db => new Promise((res,rej)=>{
@@ -260,7 +257,7 @@ async function dbClearAll() {
   }
 }
 
-// ---- Storage layer ----
+// ---- FAST STORAGE MEMORY CACHE ----
 const _nodeCache = new Map();
 let _rootNode = null;
 
@@ -400,7 +397,7 @@ function fileEmoji(ext) {
   return({pdf:'📄',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',webp:'🖼️',gif:'🖼️',svg:'🖼️',doc:'📝',docx:'📝',ppt:'📊',pptx:'📊',xls:'📈',xlsx:'📈',py:'🐍',js:'💛',ts:'💛',html:'🌐',css:'🎨',java:'⚙️',c:'⚙️',cpp:'⚙️',sql:'🗄️',json:'📋',xml:'📋',yaml:'📋',md:'📋',ipynb:'📓',zip:'🗜️',rar:'🗜️','7z':'🗜️'})[ext]||'📄';
 }
 
-// ---- Search ----
+// ---- FAST SEARCH ----
 let _searchIdx=[];
 async function buildIdx() { try{ _searchIdx=await getAllNodes(); }catch(_){} }
 function doSearch(q) {
@@ -427,7 +424,7 @@ function hlText(text,q) {
   return esc(text).replace(re,'<mark class="highlight">$1</mark>');
 }
 
-// ---- Upload ----
+// ---- PARALLEL FAST UPLOAD ----
 const BLOCKED_EXT=new Set(['mp4','avi','mov','wmv','mkv','flv','webm','mp3','wav','ogg','aac','m4a','flac','exe','msi','dmg','apk']);
 let _upQueue=[], _upBusy=false, _upFolder=null, _upDone=null;
 
@@ -469,20 +466,35 @@ function updateUpItem(item){
   const btn=document.getElementById('upload-start-btn');
   if(btn) btn.disabled=_upBusy||!_upQueue.some(i=>i.status==='pending');
 }
+
+// Upload up to 3 files in parallel for maximum speed
 async function startUploads(){
   if(_upBusy)return; _upBusy=true;
-  for(const item of _upQueue.filter(i=>i.status==='pending')){
+  const pending = _upQueue.filter(i=>i.status==='pending');
+
+  const uploadOne = async (item) => {
     item.status='uploading'; updateUpItem(item);
     try{
       await uploadFile(item.file,_upFolder,pct=>{item.progress=pct;updateUpItem(item);});
       item.status='done'; item.progress=100; updateUpItem(item);
-    }catch(err){item.status='error';item.error=err.message;updateUpItem(item);showToast('Upload failed: '+item.file.name,'error');}
+    }catch(err){
+      item.status='error';item.error=err.message;updateUpItem(item);showToast('Upload failed: '+item.file.name,'error');
+    }
+  };
+
+  // Process in parallel batches of 3
+  const batchSize = 3;
+  for (let i = 0; i < pending.length; i += batchSize) {
+    const chunk = pending.slice(i, i + batchSize);
+    await Promise.all(chunk.map(item => uploadOne(item)));
   }
+
   _upBusy=false;
   const done=_upQueue.filter(i=>i.status==='done').length;
   if(done>0){showToast(done+' file'+(done>1?'s':'')+' uploaded!','success');if(_upDone)_upDone();}
   setTimeout(()=>{_upQueue=[];renderQueue();},1500);
 }
+
 function setupDropzone(dz,fi){
   dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
   dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
@@ -491,12 +503,11 @@ function setupDropzone(dz,fi){
   fi.addEventListener('change',()=>{queueFiles(Array.from(fi.files));fi.value='';});
 }
 
-// ---- Preview ----
+// ---- FAST PREVIEW ----
 const IMG_EXT=new Set(['jpg','jpeg','png','webp','gif','svg','bmp']);
 const PDF_EXT=new Set(['pdf']);
 const CODE_EXT=new Set(['txt','md','html','css','js','ts','jsx','tsx','json','xml','yaml','yml','py','java','c','cpp','h','rb','go','rs','sh','sql','csv','log']);
 const ARCH_EXT=new Set(['zip','rar','7z','tar','gz','bz2']);
-let _prevPrismLoading=null;
 
 async function openPreview(fileObj){
   const ov=document.getElementById('preview-overlay');
@@ -546,8 +557,6 @@ function closePreview(){
 }
 function loadPrism(){
   if(window.Prism)return void Prism.highlightAll();
-  if(_prevPrismLoading)return;
-  _prevPrismLoading=true;
   const lnk=document.createElement('link');lnk.rel='stylesheet';lnk.href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';document.head.appendChild(lnk);
   const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
   s.onload=()=>{const al=document.createElement('script');al.src='https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';al.onload=()=>Prism.highlightAll();document.head.appendChild(al);};
@@ -561,7 +570,7 @@ function showToast(msg,type,dur){
   const t=document.createElement('div'); t.className=`toast toast-${type||'info'}`;
   t.innerHTML=`<span>${icons[type]||'💬'}</span><span>${esc(msg)}</span>`;
   c.appendChild(t);
-  setTimeout(()=>{t.classList.add('leaving');t.addEventListener('animationend',()=>t.remove());},dur||3000);
+  setTimeout(()=>{t.classList.add('leaving');t.addEventListener('animationend',()=>t.remove());},dur||2500);
 }
 
 // ---- App State ----
@@ -591,7 +600,6 @@ async function showView(name){
 
 async function renderHome(){
   const c=document.getElementById('view-home'); if(!c)return;
-  c.innerHTML='<div class="stats-grid">'+Array(4).fill('<div class="stat-card skeleton" style="height:90px"></div>').join('')+'</div>';
   try{
     const[recent,quota,allNodes]=await Promise.all([getRecentFiles(12),getQuotaInfo(),getAllNodes()]);
     const fc=allNodes.filter(n=>n.type==='folder').length, fc2=allNodes.filter(n=>n.type==='file').length;
@@ -622,7 +630,6 @@ async function renderFolders(folder){
   const c=document.getElementById('view-folders'); if(!c)return;
   const target=folder||ST.folder||getVaultFolder();
   ST.folder=target;
-  c.innerHTML='<div class="skeleton" style="height:36px;border-radius:8px;margin-bottom:16px"></div>';
   try{
     const{folders,files}=await listFolder(target);
     const all=[...folders,...files];
@@ -723,7 +730,7 @@ function renderSettings(){
     </div>
     <div class="settings-section">
       <div class="settings-section-title">About</div>
-      <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">📚</div><div><div class="settings-item-label">Study Vault</div><div class="settings-item-sub">v2.0 · No login · Local storage</div></div></div></div>
+      <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">📚</div><div><div class="settings-item-label">Study Vault</div><div class="settings-item-sub">v2.0 · Fast & Offline</div></div></div></div>
     </div>`;
   document.getElementById('dm-toggle')?.addEventListener('change',e=>applyTheme(e.target.checked?'dark':'light'));
   document.getElementById('gv-toggle')?.addEventListener('change',e=>{ST.viewMode=e.target.checked?'grid':'list';localStorage.setItem('sv_viewmode',ST.viewMode);});
@@ -757,7 +764,7 @@ function attachListeners(c){
   c.querySelectorAll('[data-id]').forEach(el=>{
     const{id,type,name,size,ts}=el.dataset;
     let pt;
-    el.addEventListener('pointerdown',()=>{pt=setTimeout(()=>enterSelect(id),500);});
+    el.addEventListener('pointerdown',()=>{pt=setTimeout(()=>enterSelect(id),400);});
     el.addEventListener('pointerup',()=>clearTimeout(pt));
     el.addEventListener('pointerleave',()=>clearTimeout(pt));
     el.addEventListener('click',e=>{
@@ -830,7 +837,7 @@ document.getElementById('new-folder-create')?.addEventListener('click',async()=>
   if(!name)return;
   const btn=document.getElementById('new-folder-create');
   btn.disabled=true;btn.textContent='Creating…';
-  try{await createFolder(name,ST.folder);closeModal();await renderFolders(ST.folder);await buildIdx();showToast(`"${name}" created`,'success');}
+  try{await createFolder(name,ST.folder);closeModal();await renderFolders(ST.folder);buildIdx();showToast(`"${name}" created`,'success');}
   catch(err){showToast(err.message,'error');}
   finally{btn.disabled=false;btn.textContent='Create';}
 });
@@ -838,20 +845,20 @@ document.getElementById('rename-input')?.addEventListener('keydown',e=>{if(e.key
 document.getElementById('rename-save')?.addEventListener('click',async()=>{
   const name=document.getElementById('rename-input')?.value?.trim();
   if(!name||!_mctx.id)return;
-  try{await renameNode(_mctx.id,name);closeModal();await renderFolders(ST.folder);await buildIdx();showToast('Renamed','success');}
+  try{await renameNode(_mctx.id,name);closeModal();await renderFolders(ST.folder);buildIdx();showToast('Renamed','success');}
   catch(err){showToast(err.message,'error');}
 });
 document.getElementById('delete-confirm')?.addEventListener('click',async()=>{
   const ids=_mctx.ids||[];closeModal();let ok=0;
   for(const id of ids){try{await deleteNode(id);ok++;}catch(err){showToast('Delete failed: '+err.message,'error');}}
-  if(ok>0){showToast(ok+' item'+(ok>1?'s':'')+' deleted','success');await renderFolders(ST.folder);await buildIdx();}
+  if(ok>0){showToast(ok+' item'+(ok>1?'s':'')+' deleted','success');await renderFolders(ST.folder);buildIdx();}
   exitSelect();
 });
 document.getElementById('move-confirm')?.addEventListener('click',async()=>{
   if(!_mctx.targetId){showToast('Select a folder','warning');return;}
   const ids=_mctx.ids||[];closeModal();let ok=0;
   for(const id of ids){try{await moveNode(id,_mctx.targetId);ok++;}catch(err){showToast('Move failed: '+err.message,'error');}}
-  if(ok>0){showToast(ok+' item'+(ok>1?'s':'')+' moved','success');await renderFolders(ST.folder);await buildIdx();}
+  if(ok>0){showToast(ok+' item'+(ok>1?'s':'')+' moved','success');await renderFolders(ST.folder);buildIdx();}
   exitSelect();
 });
 
@@ -864,7 +871,7 @@ setupDropzone(document.getElementById('dropzone'),document.getElementById('file-
 function openUploadSheet(){
   document.getElementById('upload-sheet-overlay')?.classList.remove('hidden');
   document.getElementById('upload-sheet')?.classList.remove('hidden');
-  setUploadTarget(ST.folder,async()=>{await renderFolders(ST.folder);await buildIdx();closeUploadSheet();});
+  setUploadTarget(ST.folder,async()=>{await renderFolders(ST.folder);buildIdx();closeUploadSheet();});
 }
 function closeUploadSheet(){document.getElementById('upload-sheet-overlay')?.classList.add('hidden');document.getElementById('upload-sheet')?.classList.add('hidden');}
 
@@ -889,40 +896,38 @@ let _searchTimer;
 _searchInput?.addEventListener('input',e=>{
   clearTimeout(_searchTimer);
   const q=e.target.value;
-  _searchTimer=setTimeout(()=>{if(ST.view!=='search')showView('search');execSearch(q);},200);
+  _searchTimer=setTimeout(()=>{if(ST.view!=='search')showView('search');execSearch(q);},100);
 });
 _searchInput?.addEventListener('keydown',e=>{
   if(e.key==='Enter'){if(ST.view!=='search')showView('search');execSearch(_searchInput.value);}
   if(e.key==='Escape'){_searchInput.value='';if(ST.view==='search')showView('home');}
 });
 
-// ---- INIT ----
+// ---- INSTANT INITIALIZATION ----
 (async()=>{
   const ls=document.getElementById('loading-screen');
   const aw=document.getElementById('app-wrapper');
-  const msg=document.getElementById('loading-msg');
 
   const savedTheme=localStorage.getItem('sv_theme')||'dark';
   document.documentElement.setAttribute('data-theme',savedTheme);
   ST.theme=savedTheme;
 
   try{
-    msg.textContent='Opening database…';
     await initStorage();
-
-    msg.textContent='Loading files…';
-    await buildIdx();
 
     ST.folderStack=[{id:ROOT_ID,name:'StudyVault',node:getVaultFolder()}];
     ST.folder=getVaultFolder();
 
-    msg.textContent='Ready!';
-    await showView('home');
+    // Render Home immediately
+    showView('home');
 
-    if(ls){ls.style.opacity='0';ls.style.transition='opacity 0.3s';setTimeout(()=>ls.style.display='none',300);}
+    // Build index in background without blocking load
+    setTimeout(buildIdx, 50);
+
+    // Instant splash hide
+    if(ls){ls.style.opacity='0';setTimeout(()=>ls.style.display='none',150);}
     if(aw)aw.style.opacity='1';
   }catch(err){
-    if(msg)msg.textContent='Error: '+err.message;
     console.error('[App]',err);
   }
 })();
