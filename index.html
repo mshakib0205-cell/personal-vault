@@ -705,6 +705,13 @@ function fileEmoji(ext) {
   return ({pdf:'📄',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',webp:'🖼️',doc:'📝',docx:'📝',ppt:'📊',pptx:'📊',xls:'📈',xlsx:'📈',py:'🐍',js:'💛',html:'🌐',css:'🎨',zip:'🗜️'})[ext] || '📄';
 }
 
+// UNREGISTER OLD SERVICE WORKERS TO FORCE HARD UPDATE
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (let r of regs) r.unregister();
+  });
+}
+
 // INITIAL LOAD
 openDB().then(() => loadView());
 </script>
