@@ -303,8 +303,11 @@
       </div>
     </div>
     <div class="g-btn-wrapper">
-      <button class="connect-google-btn" onclick="changeGmailAccount()">
-        🔑 Switch Account
+      <button class="connect-google-btn" onclick="backupToGoogleDrive()">
+        ☁️ Backup to Google Drive
+      </button>
+      <button class="connect-google-btn" style="background:rgba(255,255,255,0.1);border:1px solid var(--border-light);" onclick="openGoogleDriveFolder()">
+        📁 Open Drive Folder
       </button>
     </div>
   </div>
@@ -456,14 +459,31 @@ function dbDeleteNode(id) {
   }));
 }
 
-function changeGmailAccount() {
-  const current = localStorage.getItem('sv_user_email') || 'mohammedshakib663@gmail.com';
-  const newEmail = prompt('Enter your Google email address:', current);
-  if (newEmail && newEmail.trim()) {
-    localStorage.setItem('sv_user_email', newEmail.trim());
-    updateUserDisplay();
-    showToast(`Connected: ${newEmail.trim()}`, 'success');
+async function backupToGoogleDrive() {
+  const allNodes = await dbGetAllNodes();
+  if (!allNodes.length) {
+    showToast('Vault is empty. Upload some files first!', 'info');
+    return;
   }
+  showToast('Creating Google Drive Backup file...', 'info');
+
+  const backupData = JSON.stringify(allNodes, null, 2);
+  const blob = new Blob([backupData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `StudyVault_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+
+  setTimeout(() => {
+    if (confirm('Backup file downloaded! Click OK to open Google Drive (mohammedshakib663@gmail.com) to save your files.')) {
+      window.open('https://drive.google.com/drive/u/0/my-drive', '_blank');
+    }
+  }, 800);
+}
+
+function openGoogleDriveFolder() {
+  window.open('https://drive.google.com/drive/u/0/my-drive', '_blank');
 }
 
 function updateUserDisplay() {
