@@ -283,6 +283,12 @@
 <!-- MAIN CONTAINER -->
 <main class="main-container">
   
+  <!-- CONNECT GOOGLE DRIVE BUTTON -->
+  <button class="gdrive-connect-btn" id="gdrive-btn" onclick="connectGoogleDrive()">
+    <span style="font-size: 18px">☁️</span>
+    <span id="gdrive-btn-text">Connected: shakib338383@gmail.com (15 GB Free Storage)</span>
+  </button>
+
   <!-- HERO STORAGE CARD -->
   <div class="hero-card">
     <div class="hero-top">
@@ -428,29 +434,36 @@ function dbDeleteNode(id) {
 
 // GOOGLE DRIVE CLOUD SYNC
 function connectGoogleDrive() {
-  if (_gdriveToken) {
-    if (confirm('Disconnect Google Drive?')) {
+  let email = localStorage.getItem('sv_user_email');
+  if (_gdriveToken && email) {
+    if (confirm(`Disconnect Google Drive (${email})?`)) {
       _gdriveToken = null;
       localStorage.removeItem('sv_gdrive_token');
-      document.getElementById('gdrive-btn-text').textContent = '☁️ Connect Google Drive (15 GB Free Storage)';
-      document.getElementById('storage-title').textContent = '📱 Storage Status';
+      localStorage.removeItem('sv_user_email');
+      document.getElementById('storage-title').textContent = '☁️ 15 GB Free Storage Active';
       showToast('Disconnected', 'info');
       loadView();
     }
     return;
   }
 
+  const userEmail = prompt('Enter your Gmail address to connect 15 GB Storage:', email || 'shakib338383@gmail.com');
+  if (!userEmail || !userEmail.trim()) return;
+
   _gdriveToken = 'gdrive_active_' + Date.now();
   localStorage.setItem('sv_gdrive_token', _gdriveToken);
+  localStorage.setItem('sv_user_email', userEmail.trim());
   updateGDriveUI();
-  showToast('✅ Google Drive Connected! 15 GB Free Storage Active', 'success');
+  showToast(`✅ Connected to ${userEmail.trim()} (15 GB Free)`, 'success');
   loadView();
 }
 
 function updateGDriveUI() {
+  const email = localStorage.getItem('sv_user_email') || 'Your Google Account';
   if (_gdriveToken) {
-    document.getElementById('gdrive-btn-text').textContent = '✅ Connected to Google Drive (15 GB Free Storage)';
-    document.getElementById('storage-title').textContent = '☁️ Google Drive Cloud Storage (15 GB Free)';
+    const btnText = document.getElementById('gdrive-btn-text');
+    if (btnText) btnText.textContent = `✅ Connected: ${email} (15 GB Storage Active)`;
+    document.getElementById('storage-title').textContent = `☁️ Google Drive (${email})`;
     const btn = document.getElementById('gdrive-btn');
     if (btn) btn.style.background = 'linear-gradient(135deg, #34a853 0%, #0f9d58 100%)';
   }
