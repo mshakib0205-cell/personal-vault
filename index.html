@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
   <title>Study Vault</title>
   <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="css/main.css"/>
@@ -10,14 +10,31 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png"/>
   <meta name="theme-color" content="#0d1117"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="StudyVault"/>
   <style>
-    * { touch-action: manipulation; }
+    * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior-y: none; }
     #loading-screen{position:fixed;inset:0;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999;transition:opacity 0.15s ease-out}
-    .loading-logo{width:64px;height:64px;background:linear-gradient(135deg,#6366f1,#a371f7);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 8px 32px rgba(99,102,241,.4)}
-    .loading-title{font-size:20px;font-weight:700;background:linear-gradient(135deg,#e6edf3,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .loading-spinner{width:28px;height:28px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1}
+    .loading-logo{width:68px;height:68px;background:linear-gradient(135deg,#6366f1,#a371f7);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 10px 36px rgba(99,102,241,.45);animation:pulseLogo 1.5s infinite ease-in-out}
+    @keyframes pulseLogo { 0%,100%{transform:scale(1);} 50%{transform:scale(1.05);} }
+    .loading-title{font-size:22px;font-weight:800;background:linear-gradient(135deg,#e6edf3,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
+    .loading-spinner{width:26px;height:26px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1}
     .loading-msg{font-size:13px;color:var(--text-tertiary)}
+
+    /* Mobile Filter Pills */
+    .filter-pills-bar { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .filter-pills-bar::-webkit-scrollbar { display: none; }
+    .filter-pill { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; background: var(--bg-surface); border: 1.5px solid var(--border-subtle); color: var(--text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+    .filter-pill:active { transform: scale(0.95); }
+    .filter-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 4px 12px rgba(99,102,241,0.35); }
+
+    /* Touch active animations */
+    .file-card:active, .file-row:active, .nav-item:active, .btn:active, .fab:active { transform: scale(0.96) !important; transition: transform 0.08s ease !important; }
+    
+    /* Native App Bar Blur */
+    .app-header { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .bottom-nav { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding-bottom: max(8px, env(safe-area-inset-bottom)); height: auto; min-height: 64px; }
   </style>
 </head>
 <body>
@@ -39,7 +56,7 @@
     </div>
     <div class="header-search">
       <span class="header-search-icon">🔍</span>
-      <input class="header-search-input" id="header-search" type="search" placeholder="Search files and folders…" autocomplete="off"/>
+      <input class="header-search-input" id="header-search" type="search" placeholder="Search study notes, PDFs…" autocomplete="off"/>
     </div>
     <div class="header-actions">
       <button class="btn-icon" id="theme-toggle-btn" title="Toggle theme">☀️</button>
@@ -77,13 +94,12 @@
   <div class="upload-sheet-content">
     <div class="dropzone" id="dropzone" tabindex="0">
       <div class="dropzone-icon">📂</div>
-      <div class="dropzone-title">Drop files here</div>
-      <div class="dropzone-sub">or tap to browse</div>
-      <div class="dropzone-types">PDF · Images · Word · Excel · PowerPoint · Code · ZIP</div>
+      <div class="dropzone-title">Drop files or tap to browse</div>
+      <div class="dropzone-sub">PDF · Images · Word · Excel · Code · ZIP</div>
     </div>
     <input type="file" id="file-input" multiple hidden accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.svg,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.html,.css,.js,.ts,.py,.java,.c,.cpp,.rb,.go,.rs,.json,.xml,.yaml,.sql,.zip,.rar,.7z,.gz,.odt,.ipynb"/>
     <div id="upload-queue"></div>
-    <button class="btn btn-primary w-full btn-lg" id="upload-start-btn" disabled>⬆️ Upload</button>
+    <button class="btn btn-primary w-full btn-lg" id="upload-start-btn" disabled>⬆️ Upload Now</button>
   </div>
 </div>
 
@@ -97,7 +113,7 @@
     <div class="modal-body">
       <div class="form-group">
         <label class="form-label">Folder Name</label>
-        <input class="input" id="new-folder-input" type="text" placeholder="e.g. Physics Notes" maxlength="255" autocomplete="off"/>
+        <input class="input" id="new-folder-input" type="text" placeholder="e.g. Physics Chapter 1" maxlength="255" autocomplete="off"/>
       </div>
     </div>
     <div class="modal-footer">
@@ -165,7 +181,7 @@
 
 <script>
 // ============================================================
-// HIGH PERFORMANCE ENGINE (Zero latency, Fast IndexedDB)
+// HIGH PERFORMANCE MOBILE ENGINE
 // ============================================================
 
 const DB_NAME = 'StudyVaultFS', DB_VER = 1, ROOT_ID = 'root';
@@ -260,6 +276,7 @@ async function dbClearAll() {
 // ---- FAST STORAGE MEMORY CACHE ----
 const _nodeCache = new Map();
 let _rootNode = null;
+let _currentFilter = 'all';
 
 async function initStorage() {
   await openDB();
@@ -467,7 +484,6 @@ function updateUpItem(item){
   if(btn) btn.disabled=_upBusy||!_upQueue.some(i=>i.status==='pending');
 }
 
-// Upload up to 3 files in parallel for maximum speed
 async function startUploads(){
   if(_upBusy)return; _upBusy=true;
   const pending = _upQueue.filter(i=>i.status==='pending');
@@ -482,7 +498,6 @@ async function startUploads(){
     }
   };
 
-  // Process in parallel batches of 3
   const batchSize = 3;
   for (let i = 0; i < pending.length; i += batchSize) {
     const chunk = pending.slice(i, i + batchSize);
@@ -598,29 +613,62 @@ async function showView(name){
   else if(name==='settings')renderSettings();
 }
 
+function renderFilterPills() {
+  const categories = [
+    { id: 'all', label: 'All Files' },
+    { id: 'pdf', label: '📄 PDFs' },
+    { id: 'image', label: '🖼️ Photos' },
+    { id: 'doc', label: '📝 Docs' },
+    { id: 'code', label: '💻 Code' },
+  ];
+  return `<div class="filter-pills-bar">
+    ${categories.map(c => `<button class="filter-pill ${c.id === _currentFilter ? 'active' : ''}" onclick="setCategoryFilter('${c.id}')">${c.label}</button>`).join('')}
+  </div>`;
+}
+
+function setCategoryFilter(catId) {
+  _currentFilter = catId;
+  if (ST.view === 'folders') renderFolders(ST.folder);
+  else if (ST.view === 'home') renderHome();
+}
+
+function filterByCat(item) {
+  if (_currentFilter === 'all') return true;
+  if (item.type === 'folder') return true;
+  const ext = item.ext || getExt(item.name);
+  if (_currentFilter === 'pdf') return ext === 'pdf';
+  if (_currentFilter === 'image') return IMG_EXT.has(ext);
+  if (_currentFilter === 'doc') return ['doc','docx','ppt','pptx','xls','xlsx','odt','txt'].includes(ext);
+  if (_currentFilter === 'code') return CODE_EXT.has(ext);
+  return true;
+}
+
 async function renderHome(){
   const c=document.getElementById('view-home'); if(!c)return;
   try{
-    const[recent,quota,allNodes]=await Promise.all([getRecentFiles(12),getQuotaInfo(),getAllNodes()]);
+    const[recent,quota,allNodes]=await Promise.all([getRecentFiles(15),getQuotaInfo(),getAllNodes()]);
     const fc=allNodes.filter(n=>n.type==='folder').length, fc2=allNodes.filter(n=>n.type==='file').length;
+    const filteredRecent = recent.filter(filterByCat);
+
     c.innerHTML=`
+      ${renderFilterPills()}
       <div class="storage-bar">
-        <div class="storage-bar-label"><span>💾 On-device Storage</span><span>${fmtSize(quota.used)} used</span></div>
+        <div class="storage-bar-label"><span>💾 Device Storage</span><span>${fmtSize(quota.used)} used</span></div>
         <div class="storage-progress"><div class="storage-fill" style="width:${Math.min((quota.used/(500*1024*1024))*100,100)}%"></div></div>
       </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon">📁</div><div class="stat-value">${fc}</div><div class="stat-label">Folders</div></div>
         <div class="stat-card"><div class="stat-icon">📄</div><div class="stat-value">${fc2}</div><div class="stat-label">Files</div></div>
         <div class="stat-card"><div class="stat-icon">💾</div><div class="stat-value">${fmtSize(quota.used)}</div><div class="stat-label">Used</div></div>
-        <div class="stat-card"><div class="stat-icon">🔒</div><div class="stat-value" style="font-size:13px">Private</div><div class="stat-label">On Device</div></div>
+        <div class="stat-card"><div class="stat-icon">🔒</div><div class="stat-value" style="font-size:13px">Private</div><div class="stat-label">Offline</div></div>
       </div>
       <div class="section-header">
         <div class="section-title">Recent Files</div>
         <button class="btn btn-ghost btn-sm" onclick="showView('folders')">See all →</button>
       </div>
-      ${recent.length===0
+      ${filteredRecent.length===0
         ?'<div class="empty-state"><div class="empty-state-icon">📚</div><h3>No files yet</h3><p>Tap ⬆️ Upload to add your study files</p></div>'
-        :`<div class="${ST.viewMode==='grid'?'file-grid':'file-list'}">${recent.map(f=>itemHTML(f)).join('')}</div>`
+        :`<div class="${ST.viewMode==='grid'?'file-grid':'file-list'}">${filteredRecent.map(f=>itemHTML(f)).join('')}</div>`
       }`;
     attachListeners(c);
   }catch(err){c.innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Error</h3><p>${esc(err.message)}</p></div>`;}
@@ -632,8 +680,10 @@ async function renderFolders(folder){
   ST.folder=target;
   try{
     const{folders,files}=await listFolder(target);
-    const all=[...folders,...files];
+    const filteredFiles = files.filter(filterByCat);
+    const all=[...folders,...filteredFiles];
     c.innerHTML=`
+      ${renderFilterPills()}
       <div class="breadcrumb" id="bc">${renderBC()}</div>
       <div class="multiselect-bar hidden" id="ms-bar">
         <span id="ms-count">0 selected</span>
@@ -683,7 +733,7 @@ function renderSearchEmpty(){
 function execSearch(q){
   const c=document.getElementById('view-search'); if(!c)return;
   if(!q.trim()){c.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>Search your files</h3><p>Type in the search bar above</p></div>';return;}
-  const res=doSearch(q);
+  const res=doSearch(q).filter(filterByCat);
   if(!res.length){c.innerHTML=`<div class="empty-state"><div class="empty-state-icon">😕</div><h3>No results</h3><p>No files match "<strong>${esc(q)}</strong>"</p></div>`;return;}
   c.innerHTML=`<div class="search-query-display">${res.length} result${res.length!==1?'s':''} for <strong>"${esc(q)}"</strong></div>
     <div class="file-list">${res.map(r=>{
@@ -720,7 +770,7 @@ function renderSettings(){
     <div class="settings-section">
       <div class="settings-section-title">Storage</div>
       <div class="settings-item">
-        <div class="settings-item-left"><div class="settings-item-icon">💾</div><div><div class="settings-item-label">Local Device Storage</div><div class="settings-item-sub">Files saved in browser storage</div></div></div>
+        <div class="settings-item-left"><div class="settings-item-icon">💾</div><div><div class="settings-item-label">Device Storage (IndexedDB)</div><div class="settings-item-sub">Files saved securely in mobile browser</div></div></div>
         <span class="badge badge-success">Active</span>
       </div>
       <div class="settings-item" id="clear-btn" style="cursor:pointer">
@@ -730,7 +780,7 @@ function renderSettings(){
     </div>
     <div class="settings-section">
       <div class="settings-section-title">About</div>
-      <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">📚</div><div><div class="settings-item-label">Study Vault</div><div class="settings-item-sub">v2.0 · Fast & Offline</div></div></div></div>
+      <div class="settings-item"><div class="settings-item-left"><div class="settings-item-icon">📚</div><div><div class="settings-item-label">Study Vault PWA</div><div class="settings-item-sub">Mobile First · 100% Offline</div></div></div></div>
     </div>`;
   document.getElementById('dm-toggle')?.addEventListener('change',e=>applyTheme(e.target.checked?'dark':'light'));
   document.getElementById('gv-toggle')?.addEventListener('change',e=>{ST.viewMode=e.target.checked?'grid':'list';localStorage.setItem('sv_viewmode',ST.viewMode);});
@@ -918,13 +968,9 @@ _searchInput?.addEventListener('keydown',e=>{
     ST.folderStack=[{id:ROOT_ID,name:'StudyVault',node:getVaultFolder()}];
     ST.folder=getVaultFolder();
 
-    // Render Home immediately
     showView('home');
-
-    // Build index in background without blocking load
     setTimeout(buildIdx, 50);
 
-    // Instant splash hide
     if(ls){ls.style.opacity='0';setTimeout(()=>ls.style.display='none',150);}
     if(aw)aw.style.opacity='1';
   }catch(err){
