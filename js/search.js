@@ -1,11 +1,11 @@
 // Study Vault — Search Module (search.js)
 
 import { getAllNodes } from './storage.js';
-import { saveSearchIndex, loadSearchIndex } from './cache.js';
+import { savePref, loadPref } from './localdb.js';
 
 let _searchIndex = [];
 let _lastIndexed = 0;
-const INDEX_TTL = 5 * 60 * 1000; // 5 minutes
+const INDEX_TTL = 3 * 60 * 1000; // 3 minutes
 
 // ---- Build/refresh search index ----
 export async function buildSearchIndex(force = false) {
@@ -13,77 +13,62 @@ export async function buildSearchIndex(force = false) {
   if (!force && _searchIndex.length > 0 && (now - _lastIndexed) < INDEX_TTL) {
     return _searchIndex;
   }
-
   try {
-    const nodes = getAllNodes();
+    const nodes = await getAllNodes();
     _searchIndex = nodes;
     _lastIndexed = now;
-
-    // Persist to IndexedDB for offline search
-    await saveSearchIndex(nodes);
     return nodes;
   } catch (err) {
-    // Try loading from cache
-    if (_searchIndex.length === 0) {
-      _searchIndex = await loadSearchIndex();
-    }
+    console.warn('[Search] Index build failed:', err);
     return _searchIndex;
   }
 }
 
-// ---- Load index from cache (on startup) ----
+// ---- Load index from storage (on startup) ----
 export async function loadIndexFromCache() {
+  // Build fresh from local DB — always fast and current
   try {
-    const cached = await loadSearchIndex();
-    if (cached?.length > 0) {
-      _searchIndex = cached;
-    }
+    await buildSearchIndex(true);
   } catch (_) {}
 }
 
 // ---- Perform search ----
 export function search(query) {
-  if (!query || query.trim().length === 0) return [];
+  if (!query || !query.trim()) return [];
   const q = query.trim().toLowerCase();
   const terms = q.split(/\s+/).filter(Boolean);
-
   const results = [];
 
   for (const node of _searchIndex) {
     const name = (node.name || '').toLowerCase();
     const path = (node.path || '').toLowerCase();
 
-    // Score: how well does this node match?
     let score = 0;
     let allMatch = true;
 
     for (const term of terms) {
-      if (name === term) { score += 100; }
-      else if (name.startsWith(term)) { score += 60; }
-      else if (name.includes(term)) { score += 30; }
-      else if (path.includes(term)) { score += 10; }
+      if (name === term)            { score += 100; }
+      else if (name.startsWith(term)) { score += 60;  }
+      else if (name.includes(term))   { score += 30;  }
+      else if (path.includes(term))   { score += 10;  }
       else { allMatch = false; break; }
     }
 
-    if (allMatch && score > 0) {
-      results.push({ ...node, score });
-    }
+    if (allMatch && score > 0) results.push({ ...node, score });
   }
 
-  // Sort: folders first, then by score desc
   results.sort((a, b) => {
     if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
     return b.score - a.score;
   });
 
-  return results.slice(0, 60); // max 60 results
+  return results.slice(0, 60);
 }
 
 // ---- Highlight matching text ----
 export function highlight(text, query) {
-  if (!query || !text) return escapeHtml(text);
-  const q = query.trim();
-  const escaped = escapeRegex(q);
+  if (!query || !text) return escapeHtml(text || '');
+  const escaped = escapeRegex(query.trim());
   const regex = new RegExp(`(${escaped})`, 'gi');
   return escapeHtml(text).replace(regex, '<mark class="highlight">$1</mark>');
 }
@@ -97,13 +82,11 @@ export function debounce(fn, delay = 150) {
   };
 }
 
-// ---- Helpers ----
 function escapeHtml(str) {
-  return String(str || '').replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  return String(str || '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
   );
 }
-
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

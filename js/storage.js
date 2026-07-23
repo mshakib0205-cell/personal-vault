@@ -1,161 +1,152 @@
 // Study Vault — Storage Module (storage.js)
-// All file and folder CRUD operations via megajs
+// Pure local IndexedDB storage. No cloud. No login required.
 
-import { getStorage, getVaultFolder } from './mega.js';
+import {
+  initDB, ensureRoot, getNode as dbGetNode, getChildren,
+  createNode, updateNode, deleteNodeById,
+  saveFileData, getFileData,
+  getAllNodesFlat, getTotalSize,
+  ROOT_ID
+} from './localdb.js';
+
+// ---- In-memory node cache (for sync getNodeById) ----
+const _cache = new Map();
+let _rootNode = null;
+
+// ---- Init (called once on app start) ----
+export async function initStorage() {
+  await initDB();
+  _rootNode = await ensureRoot();
+  _cache.set(ROOT_ID, { ..._rootNode, directory: true, childCount: 0, ext: '' });
+  return _rootNode;
+}
+
+// ---- Sync getters ----
+export function getVaultFolder() {
+  return _rootNode || { id: ROOT_ID, name: 'StudyVault', type: 'folder', directory: true };
+}
+
+export function getNodeById(id) {
+  return _cache.get(id) || null;
+}
+
+export async function getQuotaInfo() {
+  const used = await getTotalSize();
+  return { used, total: null, unlimited: true };
+}
+
+export function getUserInfo() {
+  return { name: 'Study Vault', email: 'Stored on this device' };
+}
 
 // ---- List folder contents ----
 export async function listFolder(folder = null) {
-  const vault = folder || getVaultFolder();
-  if (!vault) throw new Error('Vault folder not available');
+  const parentId = folder?.id || ROOT_ID;
+  const children = await getChildren(parentId);
 
-  const children = vault.children || [];
   const folders = [];
   const files = [];
 
   for (const node of children) {
-    if (node.directory) {
-      folders.push(nodeToFolder(node));
+    if (node.type === 'folder') {
+      const sub = await getChildren(node.id);
+      const enriched = { ...node, directory: true, childCount: sub.length, ext: '' };
+      folders.push(enriched);
+      _cache.set(node.id, enriched);
     } else {
-      files.push(nodeToFile(node));
+      const enriched = { ...node, directory: false, ext: getExtension(node.name) };
+      files.push(enriched);
+      _cache.set(node.id, enriched);
     }
   }
 
-  // Sort: folders first, then files alphabetically
   folders.sort((a, b) => a.name.localeCompare(b.name));
   files.sort((a, b) => a.name.localeCompare(b.name));
 
   return { folders, files };
 }
 
-// ---- Get MEGA node by ID ----
-export function getNodeById(nodeId) {
-  const storage = getStorage();
-  if (!storage) return null;
-  return storage.files?.[nodeId] || null;
+// ---- Create folder ----
+export async function createFolder(name, parent = null) {
+  const parentId = parent?.id || ROOT_ID;
+  const clean = sanitizeName(name);
+  if (!clean) throw new Error('Invalid folder name');
+
+  const children = await getChildren(parentId);
+  if (children.find(c => c.type === 'folder' && c.name.toLowerCase() === clean.toLowerCase())) {
+    throw new Error(`Folder "${clean}" already exists here`);
+  }
+
+  const node = await createNode(clean, 'folder', parentId);
+  const enriched = { ...node, directory: true, childCount: 0, ext: '' };
+  _cache.set(node.id, enriched);
+  return enriched;
 }
 
-// ---- Create a new folder ----
-export async function createFolder(name, parentFolder = null) {
-  const parent = parentFolder || getVaultFolder();
-  if (!parent) throw new Error('Parent folder not found');
-
-  // Validate name
-  const cleanName = sanitizeName(name);
-  if (!cleanName) throw new Error('Invalid folder name');
-
-  // Check for duplicate
-  const existing = (parent.children || []).find(
-    (c) => c.directory && c.name.toLowerCase() === cleanName.toLowerCase()
-  );
-  if (existing) throw new Error(`A folder named "${cleanName}" already exists here`);
-
-  return new Promise((resolve, reject) => {
-    parent.mkdir(cleanName, (err, folder) => {
-      if (err) reject(new Error(`Failed to create folder: ${err.message || err}`));
-      else resolve(nodeToFolder(folder));
-    });
-  });
+// ---- Rename node ----
+export async function renameNode(id, newName) {
+  const clean = sanitizeName(newName);
+  if (!clean) throw new Error('Invalid name');
+  const updated = await updateNode(id, { name: clean });
+  const cached = _cache.get(id);
+  if (cached) _cache.set(id, { ...cached, name: clean });
+  return updated;
 }
 
-// ---- Rename a node (file or folder) ----
-export async function renameNode(nodeId, newName) {
-  const node = getNodeById(nodeId);
-  if (!node) throw new Error('Item not found');
-
-  const cleanName = sanitizeName(newName);
-  if (!cleanName) throw new Error('Invalid name');
-
-  return new Promise((resolve, reject) => {
-    node.rename(cleanName, (err) => {
-      if (err) reject(new Error(`Failed to rename: ${err.message || err}`));
-      else resolve(node.directory ? nodeToFolder(node) : nodeToFile(node));
-    });
-  });
+// ---- Move node ----
+export async function moveNode(id, targetFolderId) {
+  if (id === ROOT_ID) throw new Error('Cannot move the root folder');
+  const updated = await updateNode(id, { parentId: targetFolderId });
+  const cached = _cache.get(id);
+  if (cached) _cache.set(id, { ...cached, parentId: targetFolderId });
+  return updated;
 }
 
-// ---- Move a node to a different folder ----
-export async function moveNode(nodeId, targetFolderId) {
-  const node = getNodeById(nodeId);
-  const target = getNodeById(targetFolderId);
-  if (!node) throw new Error('Item not found');
-  if (!target || !target.directory) throw new Error('Target folder not found');
-
-  return new Promise((resolve, reject) => {
-    node.moveTo(target, (err) => {
-      if (err) reject(new Error(`Failed to move: ${err.message || err}`));
-      else resolve(true);
-    });
-  });
+// ---- Delete node ----
+export async function deleteNode(id) {
+  if (id === ROOT_ID) throw new Error('Cannot delete root folder');
+  await deleteNodeById(id);
+  _cache.delete(id);
+  return true;
 }
 
-// ---- Delete a node ----
-export async function deleteNode(nodeId, permanent = true) {
-  const node = getNodeById(nodeId);
-  if (!node) throw new Error('Item not found');
-
-  return new Promise((resolve, reject) => {
-    node.delete(permanent, (err) => {
-      if (err) reject(new Error(`Failed to delete: ${err.message || err}`));
-      else resolve(true);
-    });
-  });
-}
-
-// ---- Upload a file ----
+// ---- Upload file ----
 export async function uploadFile(file, folder = null, onProgress = null) {
-  const parent = folder || getVaultFolder();
-  if (!parent) throw new Error('Target folder not found');
+  const parentId = folder?.id || ROOT_ID;
 
-  // Read file as ArrayBuffer
-  const buffer = await fileToBuffer(file);
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = parent.upload({
-      name: file.name,
-      size: buffer.byteLength,
-      allowUploadBuffering: true,
-    }, buffer);
-
-    uploadStream.on('progress', (data) => {
-      if (onProgress) {
-        const percent = Math.round((data.bytesLoaded / data.bytesTotal) * 100);
-        onProgress(percent, data.bytesLoaded, data.bytesTotal);
-      }
-    });
-
-    uploadStream.on('complete', (megaFile) => {
-      resolve(nodeToFile(megaFile));
-    });
-
-    uploadStream.on('error', (err) => {
-      reject(new Error(`Upload failed: ${err.message || err}`));
-    });
+  const buffer = await readFileWithProgress(file, (pct, loaded, total) => {
+    if (onProgress) onProgress(Math.min(pct, 95), loaded, total);
   });
+
+  const node = await createNode(file.name, 'file', parentId, {
+    size: file.size,
+    mimeType: file.type || getMimeFromName(file.name),
+  });
+
+  await saveFileData(node.id, buffer);
+  if (onProgress) onProgress(100, file.size, file.size);
+
+  const enriched = { ...node, directory: false, ext: getExtension(file.name) };
+  _cache.set(node.id, enriched);
+  return enriched;
 }
 
-// ---- Download a file (returns Blob URL) ----
-export async function downloadFile(nodeId) {
-  const node = getNodeById(nodeId);
-  if (!node) throw new Error('File not found');
-
-  const buffer = await node.downloadBuffer();
-  const blob = new Blob([buffer], { type: node.attributes?.mime || 'application/octet-stream' });
-  return URL.createObjectURL(blob);
+// ---- Get file buffer (for preview) ----
+export async function getFileBuffer(id) {
+  const buf = await getFileData(id);
+  if (!buf) throw new Error('File data not found on this device');
+  return buf;
 }
 
-// ---- Get downloadable buffer for preview/cache ----
-export async function getFileBuffer(nodeId) {
-  const node = getNodeById(nodeId);
-  if (!node) throw new Error('File not found');
-  return node.downloadBuffer();
-}
-
-// ---- Trigger download to device ----
-export async function triggerDownload(nodeId) {
-  const node = getNodeById(nodeId);
+// ---- Download file to device ----
+export async function triggerDownload(id) {
+  const node = await dbGetNode(id);
   if (!node) throw new Error('File not found');
 
-  const url = await downloadFile(nodeId);
+  const buffer = await getFileBuffer(id);
+  const blob = new Blob([buffer], { type: node.mimeType || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
   const a = document.createElement('a');
   a.href = url;
   a.download = node.name;
@@ -165,144 +156,111 @@ export async function triggerDownload(nodeId) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-// ---- Get all nodes (for search index) ----
-export function getAllNodes(rootFolder = null, path = '') {
-  const root = rootFolder || getVaultFolder();
-  if (!root) return [];
-
-  const results = [];
-  const basePath = path || root.name;
-
-  for (const node of (root.children || [])) {
-    const nodePath = basePath ? `${basePath} / ${node.name}` : node.name;
-
-    if (node.directory) {
-      results.push({
-        id: node.nodeId,
-        name: node.name,
-        type: 'folder',
-        path: nodePath,
-        parentId: root.nodeId,
-        timestamp: node.timestamp,
-      });
-      // Recurse into subfolder
-      results.push(...getAllNodes(node, nodePath));
-    } else {
-      results.push({
-        id: node.nodeId,
-        name: node.name,
-        type: 'file',
-        path: nodePath,
-        parentId: root.nodeId,
-        size: node.size,
-        timestamp: node.timestamp,
-        ext: getExtension(node.name),
-      });
-    }
+// ---- Get all nodes for search ----
+export async function getAllNodes() {
+  const all = await getAllNodesFlat();
+  const nodeMap = {};
+  for (const n of all) {
+    nodeMap[n.id] = n;
+    _cache.set(n.id, { ...n, directory: n.type === 'folder', ext: getExtension(n.name) });
   }
 
-  return results;
+  function getPath(nodeId) {
+    const parts = [];
+    let cur = nodeMap[nodeId];
+    while (cur && cur.parentId && cur.parentId !== ROOT_ID) {
+      parts.unshift(cur.name);
+      cur = nodeMap[cur.parentId];
+    }
+    if (cur) parts.unshift(cur.name);
+    return parts.join(' / ');
+  }
+
+  return all.map(n => ({
+    id: n.id, name: n.name, type: n.type,
+    path: getPath(n.id),
+    parentId: n.parentId,
+    size: n.size || 0,
+    timestamp: n.timestamp,
+    ext: n.type === 'file' ? getExtension(n.name) : '',
+  }));
 }
 
-// ---- Get recent files (last N modified) ----
-export function getRecentFiles(limit = 10) {
-  const all = getAllNodes();
+// ---- Get recent files ----
+export async function getRecentFiles(limit = 10) {
+  const all = await getAllNodes();
   return all
-    .filter((n) => n.type === 'file')
+    .filter(n => n.type === 'file')
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
     .slice(0, limit);
 }
 
-// ---- Build folder breadcrumb path ----
-export function getFolderPath(node) {
-  const vault = getVaultFolder();
-  const path = [];
-  let current = node;
-
-  while (current && current.nodeId !== vault?.nodeId) {
-    path.unshift({ id: current.nodeId, name: current.name, node: current });
-    current = current.parent;
-  }
-
-  // Add root
-  if (vault) path.unshift({ id: vault.nodeId, name: 'StudyVault', node: vault });
-
-  return path;
-}
-
-// ---- Get all folders (flat list for move picker) ----
-export function getAllFolders(rootFolder = null, depth = 0) {
-  const root = rootFolder || getVaultFolder();
-  if (!root) return [];
-
+// ---- Get all folders (flat list, for move modal) ----
+export async function getAllFolders(parentId = ROOT_ID, depth = 0) {
   const results = [];
-  if (depth === 0) {
-    results.push({ id: root.nodeId, name: 'StudyVault', node: root, depth: 0 });
-  }
-
-  for (const child of (root.children || [])) {
-    if (child.directory) {
-      results.push({ id: child.nodeId, name: child.name, node: child, depth: depth + 1 });
-      results.push(...getAllFolders(child, depth + 1));
+  if (depth === 0) results.push({ id: ROOT_ID, name: 'StudyVault', depth: 0 });
+  const children = await getChildren(parentId);
+  for (const child of children) {
+    if (child.type === 'folder') {
+      results.push({ id: child.id, name: child.name, depth: depth + 1 });
+      results.push(...(await getAllFolders(child.id, depth + 1)));
     }
   }
-
   return results;
 }
 
-// ---- Helper: Convert MEGA node to folder object ----
-function nodeToFolder(node) {
-  return {
-    id: node.nodeId,
-    name: node.name,
-    type: 'folder',
-    directory: true,
-    timestamp: node.timestamp,
-    childCount: (node.children || []).length,
-    node,
-  };
+// ---- Get folder breadcrumb path ----
+export async function getFolderPath(node) {
+  const path = [{ id: node.id, name: node.name, node }];
+  let cur = node;
+  while (cur.parentId && cur.parentId !== ROOT_ID) {
+    const parent = await dbGetNode(cur.parentId);
+    if (!parent) break;
+    path.unshift({ id: parent.id, name: parent.name, node: parent });
+    cur = parent;
+  }
+  path.unshift({ id: ROOT_ID, name: 'StudyVault', node: getVaultFolder() });
+  return path;
 }
 
-// ---- Helper: Convert MEGA node to file object ----
-function nodeToFile(node) {
-  return {
-    id: node.nodeId,
-    name: node.name,
-    type: 'file',
-    directory: false,
-    size: node.size || 0,
-    timestamp: node.timestamp,
-    ext: getExtension(node.name),
-    node,
-  };
-}
-
-// ---- Helper: Read File as ArrayBuffer ----
-function fileToBuffer(file) {
+// ---- Helpers ----
+function readFileWithProgress(file, onProgress) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.onprogress = (e) => {
+      if (onProgress && e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 90), e.loaded, e.total);
+      }
+    };
     reader.onload = (e) => resolve(e.target.result);
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsArrayBuffer(file);
   });
 }
 
-// ---- Helper: Get file extension ----
 export function getExtension(filename) {
   if (!filename) return '';
   const parts = filename.toLowerCase().split('.');
   return parts.length > 1 ? parts.pop() : '';
 }
 
-// ---- Helper: Sanitize name ----
 function sanitizeName(name) {
-  return String(name || '')
-    .trim()
-    .replace(/[\/\\:*?"<>|]/g, '')
-    .slice(0, 255);
+  return String(name || '').trim().replace(/[\/\\:*?"<>|]/g, '').slice(0, 255);
 }
 
-// ---- Format file size ----
+function getMimeFromName(name) {
+  const ext = getExtension(name);
+  const map = {
+    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', webp: 'image/webp', gif: 'image/gif',
+    svg: 'image/svg+xml', txt: 'text/plain', md: 'text/markdown',
+    html: 'text/html', css: 'text/css', js: 'text/javascript',
+    json: 'application/json', xml: 'application/xml',
+    zip: 'application/zip', py: 'text/x-python',
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
 export function formatSize(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -310,9 +268,9 @@ export function formatSize(bytes) {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${sizes[i]}`;
 }
 
-// ---- Format timestamp ----
 export function formatDate(timestamp) {
   if (!timestamp) return '';
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
 }

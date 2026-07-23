@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <meta name="description" content="Study Vault — Your personal study file manager. Securely store and organize study materials." />
-  <title>Study Vault — Login</title>
+  <meta name="description" content="Study Vault — Personal study file manager. No login required." />
+  <title>Study Vault</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="stylesheet" href="css/app.css" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <meta name="theme-color" content="#0d1117" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -16,199 +16,255 @@
 </head>
 <body>
 
-<div class="auth-page" id="auth-page">
+<!-- ===== LOADING SCREEN ===== -->
+<div id="loading-screen">
+  <div class="loading-logo">📚</div>
+  <div class="loading-title">Study Vault</div>
+  <div class="spinner loading-spinner"></div>
+  <div class="loading-msg" id="loading-msg">Setting up your vault…</div>
+</div>
 
-  <!-- Theme Toggle -->
-  <button class="btn-icon theme-toggle-auth" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+<div class="app-wrapper" id="app-wrapper" style="opacity:0;transition:opacity 0.3s">
 
-  <!-- Auth Card -->
-  <div class="auth-card">
-
-    <!-- Branding -->
-    <div class="auth-brand">
-      <div class="auth-logo">📚</div>
-      <div class="auth-title">Study Vault</div>
-      <div class="auth-subtitle">Your personal study file manager</div>
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-logo" id="logo-home">
+      <div class="header-logo-icon">📚</div>
+      <span class="header-logo-text">Study Vault</span>
     </div>
-
-    <!-- Tabs -->
-    <div class="auth-tabs" role="tablist">
-      <button class="auth-tab active" id="tab-login" data-tab="login" role="tab" aria-selected="true">Sign In</button>
-      <button class="auth-tab" id="tab-signup" data-tab="signup" role="tab" aria-selected="false">Create Account</button>
+    <div class="header-search">
+      <span class="header-search-icon">🔍</span>
+      <input class="header-search-input" id="header-search" type="search"
+             placeholder="Search files and folders…" autocomplete="off" aria-label="Search" />
     </div>
-
-    <!-- Error Message -->
-    <div class="auth-error hidden" id="auth-error" role="alert">
-      <span>⚠️</span>
-      <span id="auth-error-msg">Error message</span>
+    <div class="header-actions">
+      <button class="btn-icon hidden" id="install-btn" title="Install app">📲</button>
+      <button class="btn-icon" id="theme-toggle-btn" title="Toggle theme">☀️</button>
     </div>
+  </header>
 
-    <!-- Login Form -->
-    <form class="auth-form" id="login-form" autocomplete="on" novalidate>
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="app-main" id="app-main">
+
+    <div class="view active" id="view-home"><!-- Rendered by ui.js --></div>
+    <div class="view" id="view-folders"><!-- Rendered by ui.js --></div>
+    <div class="view" id="view-search">
+      <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <h3>Search your files</h3>
+        <p>Type in the search bar above</p>
+      </div>
+    </div>
+    <div class="view" id="view-settings"><!-- Rendered by ui.js --></div>
+
+  </main>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="nav-item active" data-view="home" aria-label="Home">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-view="folders" aria-label="Folders">
+      <span class="nav-icon">📁</span><span class="nav-label">Folders</span>
+    </button>
+    <button class="nav-item" data-view="search" aria-label="Search">
+      <span class="nav-icon">🔍</span><span class="nav-label">Search</span>
+    </button>
+    <button class="nav-item nav-upload" data-view="upload" aria-label="Upload">
+      <span class="nav-icon-wrapper">⬆️</span><span class="nav-label">Upload</span>
+    </button>
+    <button class="nav-item" data-view="settings" aria-label="Settings">
+      <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ===== FAB ===== -->
+<button class="fab hidden" id="fab-new-folder" title="New folder" aria-label="New folder">＋</button>
+
+<!-- ===== UPLOAD SHEET ===== -->
+<div class="bottom-sheet-overlay hidden" id="upload-sheet-overlay"></div>
+<div class="bottom-sheet hidden" id="upload-sheet" role="dialog" aria-label="Upload files">
+  <div class="sheet-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="sheet-title">Upload Files</div>
+    <button class="btn-icon" id="upload-sheet-close" aria-label="Close">✕</button>
+  </div>
+  <div class="upload-sheet-content">
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop files or tap to browse">
+      <div class="dropzone-icon">📂</div>
+      <div class="dropzone-title">Drop files here</div>
+      <div class="dropzone-sub">or tap to browse</div>
+      <div class="dropzone-types">PDF · Images · Word · Excel · PowerPoint · ZIP · Code files</div>
+    </div>
+    <input type="file" id="file-input" multiple hidden
+           accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.svg,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.html,.css,.js,.ts,.py,.java,.c,.cpp,.rb,.go,.rs,.json,.xml,.yaml,.sql,.zip,.rar,.7z,.tar,.gz,.odt,.ods,.odp,.ipynb" />
+    <div id="upload-queue"></div>
+    <button class="btn btn-primary w-full btn-lg" id="upload-start-btn" disabled>⬆️ Start Upload</button>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+<div class="overlay hidden" id="modal-overlay">
+
+  <div class="modal hidden" id="new-folder-modal" role="dialog" aria-labelledby="nf-title">
+    <div class="modal-header">
+      <div class="modal-title" id="nf-title">📁 New Folder</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
       <div class="form-group">
-        <label class="form-label" for="login-email">MEGA Email</label>
-        <div class="input-wrapper">
-          <span class="input-icon">✉️</span>
-          <input class="input" id="login-email" type="email" placeholder="your@email.com"
-                 autocomplete="email" required />
-        </div>
+        <label class="form-label" for="new-folder-input">Folder Name</label>
+        <input class="input" id="new-folder-input" type="text" placeholder="e.g. Physics Notes" maxlength="255" autocomplete="off" />
       </div>
-      <div class="form-group">
-        <label class="form-label" for="login-password">Password</label>
-        <div class="input-wrapper">
-          <span class="input-icon">🔒</span>
-          <input class="input" id="login-password" type="password" placeholder="Your MEGA password"
-                 autocomplete="current-password" required />
-          <span class="input-suffix" id="toggle-pw-login" title="Show/hide password">👁️</span>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:-4px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary)">
-          <input type="checkbox" id="remember-me" style="accent-color:var(--accent);" />
-          Remember me on this device
-        </label>
-      </div>
-      <button type="submit" class="auth-submit" id="login-btn">
-        <span id="login-btn-text">Sign In to Study Vault</span>
-      </button>
-    </form>
-
-    <!-- Signup Form (hidden by default) -->
-    <form class="auth-form hidden" id="signup-form" autocomplete="off" novalidate>
-      <div class="auth-info">
-        <strong>Don't have a MEGA account?</strong><br/>
-        Study Vault uses <a href="https://mega.nz/register" target="_blank" rel="noopener">MEGA.nz</a>
-        for free, encrypted cloud storage (20 GB free).<br/>
-        Create your free account there, then come back to sign in.
-      </div>
-      <a href="https://mega.nz/register" target="_blank" rel="noopener" class="btn btn-primary btn-lg w-full"
-         style="justify-content:center;text-decoration:none;">
-        🚀 Create Free MEGA Account
-      </a>
-      <div class="auth-divider">or</div>
-      <button type="button" class="btn btn-secondary btn-lg w-full" id="go-to-login">
-        Sign in with existing account
-      </button>
-    </form>
-
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="new-folder-cancel">Cancel</button>
+      <button class="btn btn-primary" id="new-folder-create">Create</button>
+    </div>
   </div>
 
-  <!-- Footer -->
-  <div class="auth-footer">
-    Your files are end-to-end encrypted by MEGA 🔐
+  <div class="modal hidden" id="rename-modal" role="dialog" aria-labelledby="rn-title">
+    <div class="modal-header">
+      <div class="modal-title" id="rn-title">✏️ Rename</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="rename-input">New Name</label>
+        <input class="input" id="rename-input" type="text" maxlength="255" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="rename-cancel">Cancel</button>
+      <button class="btn btn-primary" id="rename-save">Save</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="delete-modal" role="dialog" aria-labelledby="del-title">
+    <div class="modal-header"><div class="modal-title" id="del-title">🗑️ Delete</div></div>
+    <div class="modal-body">
+      <p id="delete-msg" style="color:var(--text-secondary)">Delete this item? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="delete-cancel">Cancel</button>
+      <button class="btn btn-danger" id="delete-confirm">Delete</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="move-modal" role="dialog" aria-labelledby="mv-title" style="max-height:80dvh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--bg-card);z-index:1;padding-bottom:12px">
+      <div class="modal-title" id="mv-title">📁 Move to…</div>
+      <button class="btn-icon" onclick="document.getElementById('modal-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-tertiary);margin-bottom:12px">Select a destination:</p>
+      <div class="folder-tree" id="move-folder-tree"></div>
+    </div>
+    <div class="modal-footer" style="position:sticky;bottom:0;background:var(--bg-card);padding-top:12px">
+      <button class="btn btn-secondary" id="move-cancel">Cancel</button>
+      <button class="btn btn-primary" id="move-confirm">Move Here</button>
+    </div>
   </div>
 
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container"></div>
+<!-- ===== PREVIEW ===== -->
+<div class="preview-overlay hidden" id="preview-overlay" role="dialog" aria-label="File preview">
+  <div class="preview-header">
+    <button class="btn-icon" id="preview-close-btn" aria-label="Close" style="color:var(--text-secondary)">✕</button>
+    <div class="preview-filename" id="preview-filename">file.pdf</div>
+    <div class="preview-actions">
+      <button class="btn-icon" id="preview-download-btn" title="Download" style="color:var(--text-secondary)">⬇️</button>
+    </div>
+  </div>
+  <div class="preview-body" id="preview-body"></div>
+  <div style="padding:8px 16px;background:rgba(22,27,34,.9);border-top:1px solid var(--border-subtle);display:flex;gap:16px;font-size:12px;color:var(--text-tertiary);flex-shrink:0">
+    <span id="preview-size"></span><span id="preview-date"></span>
+  </div>
+</div>
+
+<!-- ===== CONTEXT MENU ===== -->
+<div class="context-menu hidden" id="context-menu" role="menu"></div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast-container" aria-live="polite"></div>
 
 <script type="module">
-  import { login, restoreSession, isLoggedIn } from './js/mega.js';
+  import { initStorage } from './js/storage.js';
+  import { initApp, applyTheme } from './js/ui.js';
+  import { buildSearchIndex } from './js/search.js';
   import { registerServiceWorker } from './js/sw-register.js';
 
   registerServiceWorker();
 
-  // ---- Restore session on load ----
+  // Apply saved theme immediately
+  const savedTheme = localStorage.getItem('sv_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  const loadingScreen = document.getElementById('loading-screen');
+  const loadingMsg    = document.getElementById('loading-msg');
+  const appWrapper    = document.getElementById('app-wrapper');
+
+  function setMsg(m) { if (loadingMsg) loadingMsg.textContent = m; }
+
+  function hideLoader() {
+    if (loadingScreen) {
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.transition = 'opacity 0.3s';
+      setTimeout(() => { loadingScreen.style.display='none'; }, 300);
+    }
+    if (appWrapper) appWrapper.style.opacity = '1';
+  }
+
   (async () => {
-    if (isLoggedIn()) {
-      showLoading('Restoring session…');
-      try {
-        const storage = await restoreSession();
-        if (storage) {
-          window.location.href = 'app.html';
-          return;
-        }
-      } catch (_) {}
-      hideLoading();
+    try {
+      setMsg('Opening local database…');
+      await initStorage();
+
+      setMsg('Loading your files…');
+      await buildSearchIndex(true);
+
+      setMsg('Ready!');
+      await initApp();
+
+      hideLoader();
+    } catch (err) {
+      setMsg(`Error: ${err.message}`);
+      console.error('[App] Init failed:', err);
     }
   })();
-
-  // ---- Theme toggle ----
-  const themeBtn = document.getElementById('theme-toggle');
-  let theme = localStorage.getItem('sv_theme') || 'dark';
-  applyTheme(theme);
-
-  themeBtn?.addEventListener('click', () => {
-    theme = theme === 'dark' ? 'light' : 'dark';
-    applyTheme(theme);
-  });
-
-  function applyTheme(t) {
-    theme = t;
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('sv_theme', t);
-    if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
-  }
-
-  // ---- Tabs ----
-  document.querySelectorAll('.auth-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      document.querySelectorAll('.auth-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === target));
-      document.getElementById('login-form').classList.toggle('hidden', target !== 'login');
-      document.getElementById('signup-form').classList.toggle('hidden', target !== 'signup');
-      hideError();
-    });
-  });
-
-  document.getElementById('go-to-login')?.addEventListener('click', () => {
-    document.querySelector('[data-tab="login"]')?.click();
-  });
-
-  // ---- Toggle password visibility ----
-  document.getElementById('toggle-pw-login')?.addEventListener('click', () => {
-    const pw = document.getElementById('login-password');
-    pw.type = pw.type === 'password' ? 'text' : 'password';
-  });
-
-  // ---- Login Form ----
-  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideError();
-
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const remember = document.getElementById('remember-me')?.checked || false;
-
-    if (!email || !password) { showError('Please enter your email and password'); return; }
-
-    showLoading('Signing in…');
-
-    try {
-      await login(email, password, remember);
-      window.location.href = 'app.html';
-    } catch (err) {
-      hideLoading();
-      showError(err.message);
-    }
-  });
-
-  // ---- Helpers ----
-  function showLoading(msg = 'Loading…') {
-    const btn = document.getElementById('login-btn');
-    const text = document.getElementById('login-btn-text');
-    if (btn) btn.disabled = true;
-    if (text) text.innerHTML = `<div class="spinner"></div> ${msg}`;
-  }
-
-  function hideLoading() {
-    const btn = document.getElementById('login-btn');
-    const text = document.getElementById('login-btn-text');
-    if (btn) btn.disabled = false;
-    if (text) text.textContent = 'Sign In to Study Vault';
-  }
-
-  function showError(msg) {
-    const el = document.getElementById('auth-error');
-    const msgEl = document.getElementById('auth-error-msg');
-    if (el && msgEl) { msgEl.textContent = msg; el.classList.remove('hidden'); }
-  }
-
-  function hideError() {
-    document.getElementById('auth-error')?.classList.add('hidden');
-  }
 </script>
+
+<style>
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: var(--bg-base);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; z-index: 9999;
+  }
+  .loading-logo {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg,#6366f1,#a371f7);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 8px 32px rgba(99,102,241,.4);
+  }
+  .loading-title {
+    font-size: 20px; font-weight: 700;
+    background: linear-gradient(135deg,#e6edf3,#6366f1);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .loading-spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(99,102,241,.2);
+    border-top-color: #6366f1;
+  }
+  .loading-msg { font-size: 13px; color: var(--text-tertiary); }
+</style>
 
 </body>
 </html>
