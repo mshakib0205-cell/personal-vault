@@ -250,6 +250,38 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 8px;
     }
 
+    /* MOBILE ALIGNMENT & RESPONSIVE LAYOUT */
+    @media (max-width: 600px) {
+      .mag-header { padding: 12px 14px; }
+      .mag-title { font-size: 24px; }
+      .mag-subtitle { font-size: 9.5px; letter-spacing: 2px; }
+      .mag-container { padding: 14px; }
+
+      .editorial-hero { padding: 18px 14px; border-radius: 18px; }
+      .editorial-headline { font-size: 18px; }
+      .editorial-sub { font-size: 12px; margin-bottom: 14px; }
+
+      .user-cloud-pill { width: 100%; justify-content: center; font-size: 11px; padding: 8px 12px; box-sizing: border-box; }
+      .user-cloud-pill #user-email-display { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+
+      .hero-btn-row { flex-direction: column; width: 100%; gap: 8px; }
+      .hero-btn-row .mag-btn { width: 100%; justify-content: center; height: 44px; font-size: 12.5px; }
+
+      .mag-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .mag-card { height: 145px; padding: 12px; border-radius: 14px; }
+      .mag-card-title { font-size: 12.5px; }
+
+      .mag-dock {
+        width: calc(100% - 24px); height: 60px; bottom: max(12px, env(safe-area-inset-bottom));
+      }
+      .dock-item { width: 48px; font-size: 8.5px; }
+      .dock-icon { font-size: 18px; }
+      .dock-fab { width: 46px; height: 46px; font-size: 20px; margin-top: -18px; }
+
+      .install-card { padding: 20px; border-radius: 20px; }
+      .sheet-box { padding: 18px; border-radius: 24px 24px 0 0; }
+    }
+
     .hidden { display: none !important; }
   </style>
 </head>
